@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	"github.com/operator-framework/operator-sdk/pkg/status"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,8 +16,9 @@ type SopsSecretSpec struct {
 
 // SopsSecretStatus defines the observed state of SopsSecret
 type SopsSecretStatus struct {
-	// Conditions represent the latest available observations of the object's state
-	Conditions status.Conditions `json:"conditions"`
+	LastUpdate metav1.Time
+	Reason     string
+	Status     string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

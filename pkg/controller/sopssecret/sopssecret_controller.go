@@ -4,6 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math"
+	"time"
+	"unicode"
+
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/craftypath/sops-operator/pkg/sops"
 
@@ -21,7 +27,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_sopssecret")
+const controllerName = "sopssecret-controller"
+
+var log = logf.Log.WithName(controllerName)
 
 type Decryptor interface {
 	Decrypt(fileName string, encrypted string) ([]byte, error)
@@ -38,6 +46,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileSopsSecret{
 		client:    mgr.GetClient(),
 		scheme:    mgr.GetScheme(),
+		recorder:  mgr.GetEventRecorderFor(controllerName),
 		decryptor: &sops.Decryptor{},
 	}
 }
@@ -45,7 +54,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("sopssecret-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -77,6 +86,7 @@ type ReconcileSopsSecret struct {
 	// that reads objects from the cache and writes to the apiserver
 	client    client.Client
 	scheme    *runtime.Scheme
+	recorder  record.EventRecorder
 	decryptor Decryptor
 }
 
@@ -101,7 +111,7 @@ func (r *ReconcileSopsSecret) Reconcile(request reconcile.Request) (reconcile.Re
 		},
 	}
 
-	if _, err := ctrl.CreateOrUpdate(ctx, r.client, secret, func() error {
+	result, err := ctrl.CreateOrUpdate(ctx, r.client, secret, func() error {
 		if !secret.CreationTimestamp.IsZero() {
 			if !metav1.IsControlledBy(secret, instance) {
 				return fmt.Errorf("secret already exists and not owned by sops-operator")
@@ -112,11 +122,12 @@ func (r *ReconcileSopsSecret) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		return nil
-	}); err != nil {
-		return reconcile.Result{}, err
+	})
+	if err != nil {
+		return r.manageError(instance, err)
 	}
 
-	return reconcile.Result{}, nil
+	return r.manageSuccess(instance, result)
 }
 
 func (r *ReconcileSopsSecret) update(secret *corev1.Secret, sopsSecret *craftypathv1alpha1.SopsSecret) error {
@@ -142,4 +153,70 @@ func (r *ReconcileSopsSecret) update(secret *corev1.Secret, sopsSecret *craftypa
 		return fmt.Errorf("unable to set ownerReference: %w", err)
 	}
 	return nil
+}
+
+func (r *ReconcileSopsSecret) manageError(instance *craftypathv1alpha1.SopsSecret, issue error) (reconcile.Result, error) {
+	var retryInterval time.Duration
+
+	r.recorder.Event(instance, "Warning", "ProcessingError", capitalizeFirst(issue.Error()))
+
+	lastUpdate := instance.Status.LastUpdate
+	lastStatus := instance.Status.Status
+
+	status := craftypathv1alpha1.SopsSecretStatus{
+		LastUpdate: metav1.Now(),
+		Reason:     issue.Error(),
+		Status:     "Failure",
+	}
+	instance.Status = status
+
+	if err := r.client.Status().Update(context.Background(), instance); err != nil {
+		log.Error(err, "Unable to update status")
+		return reconcile.Result{
+			RequeueAfter: time.Second,
+			Requeue:      true,
+		}, nil
+	}
+
+	if lastUpdate.IsZero() || lastStatus == "Success" {
+		retryInterval = time.Second
+	} else {
+		retryInterval = status.LastUpdate.Sub(lastUpdate.Time.Round(time.Second))
+	}
+
+	return reconcile.Result{
+		RequeueAfter: time.Duration(math.Min(float64(retryInterval.Nanoseconds()*2), float64(time.Hour.Nanoseconds()*6))),
+		Requeue:      true,
+	}, nil
+}
+
+func (r *ReconcileSopsSecret) manageSuccess(instance *craftypathv1alpha1.SopsSecret, result controllerutil.OperationResult) (reconcile.Result, error) {
+	status := craftypathv1alpha1.SopsSecretStatus{
+		LastUpdate: metav1.Now(),
+		Reason:     "",
+		Status:     "Success",
+	}
+	instance.Status = status
+
+	if err := r.client.Status().Update(context.Background(), instance); err != nil {
+		log.Error(err, "unable to update status")
+		r.recorder.Event(instance, "Warning", "ProcessingError", "Unable to update status")
+		return reconcile.Result{
+			RequeueAfter: time.Second,
+			Requeue:      true,
+		}, nil
+	}
+
+	opResult := capitalizeFirst(string(result))
+	r.recorder.Event(instance, "Normal", opResult, fmt.Sprintf("%s secret: %s", opResult, instance.Name))
+	return reconcile.Result{}, nil
+}
+
+func capitalizeFirst(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	tmp := []rune(s)
+	tmp[0] = unicode.ToUpper(tmp[0])
+	return string(tmp)
 }
