@@ -2,6 +2,7 @@ package sopssecret
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"go.uber.org/zap/zapcore"
@@ -28,11 +29,13 @@ func (f *FakeDecryptor) Decrypt(fileName string, encrypted string) ([]byte, erro
 	return []byte("unencrypted"), nil
 }
 
-func init() {
+func TestMain(m *testing.M) {
 	logf.SetLogger(
 		zap.New(zap.UseDevMode(true),
 			zap.Encoder(zapcore.NewConsoleEncoder(uberzap.NewDevelopmentEncoderConfig()))),
 	)
+
+	os.Exit(m.Run())
 }
 
 var (
