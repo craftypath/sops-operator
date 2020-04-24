@@ -43,7 +43,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const controllerName = "sopssecret-controller"
+type loggerKey string
+
+const (
+	reqLoggerKey   loggerKey = "logger"
+	controllerName string    = "sopssecret-controller"
+)
 
 var log = logf.Log.WithName(controllerName)
 
@@ -100,7 +105,7 @@ type ReconcileSopsSecret struct {
 // and what is in the SopsSecret.Spec
 func (r *ReconcileSopsSecret) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	ctx := context.WithValue(context.Background(), "logger", reqLogger)
+	ctx := context.WithValue(context.Background(), reqLoggerKey, reqLogger)
 
 	reqLogger.Info("reconciling SopsSecret")
 
@@ -239,5 +244,5 @@ func capitalizeFirst(s string) string {
 }
 
 func logger(ctx context.Context) logr.Logger {
-	return ctx.Value("logger").(logr.Logger)
+	return ctx.Value(reqLoggerKey).(logr.Logger)
 }
