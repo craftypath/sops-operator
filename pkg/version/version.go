@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package craftypath contains craftypath API versions.
-//
-// This file ensures Go source parsers acknowledge the craftypath package
-// and any child packages. It can be removed if any other Go source files are
-// added to this package.
-package craftypath
+package version
+
+var (
+	Version   = "dev"
+	GitCommit = "HEAD"
+	BuildDate = "unknown"
+)

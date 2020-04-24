@@ -1,0 +1,51 @@
+before:
+  hooks:
+    - go mod download
+builds:
+  - main: cmd/manager/main.go
+    binary: sops-operator
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - arm
+      - amd64
+    goos:
+      - linux
+      - darwin
+      - windows
+    ldflags:
+      - >-
+        -X github.com/craftypath/sops-operator/pkg/version.Version={{ .Tag }}
+        -X github.com/craftypath/sops-operator/pkg/version.GitCommit={{ .Commit }}
+        -X github.com/craftypath/sops-operator/pkg/version.BuildDate={{ .Date }}
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+dockers:
+  - goos: linux
+    goarch: amd64
+    binaries:
+      - sops-operator
+    skip_push: false
+    dockerfile: build/Dockerfile
+    image_templates:
+      - craftypath/sops-operator:{{ .Tag }}
+      - craftypath/sops-operator:latest
+    build_flag_templates:
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.revision={{ .Commit }}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.created={{ .Date }}
+      - --label=org.opencontainers.image.description=The Kubernetes operator for Mozilla SOPS
+      - --label=org.opencontainers.image.vendor=craftypath
+      - --label=org.opencontainers.image.licenses=Apache-2.0
+      - --label=org.opencontainers.image.source=https://github.com/craftypath/sops-operator
+      - --label=org.opencontainers.image.authors=The SOPS Operator Authors

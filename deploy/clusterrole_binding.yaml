@@ -1,11 +1,11 @@
-kind: RoleBinding
+kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: sops-operator
 subjects:
-- kind: ServiceAccount
-  name: sops-operator
+  - kind: ServiceAccount
+    name: sops-operator
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: sops-operator
   apiGroup: rbac.authorization.k8s.io
