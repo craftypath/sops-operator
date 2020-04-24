@@ -4,19 +4,21 @@ import (
 	"context"
 	"testing"
 
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"go.uber.org/zap/zapcore"
 
 	craftypathv1alpha1 "github.com/craftypath/sops-operator/pkg/apis/craftypath/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	uberzap "go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -27,7 +29,10 @@ func (f *FakeDecryptor) Decrypt(fileName string, encrypted string) ([]byte, erro
 }
 
 func init() {
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	logf.SetLogger(
+		zap.New(zap.UseDevMode(true),
+			zap.Encoder(zapcore.NewConsoleEncoder(uberzap.NewDevelopmentEncoderConfig()))),
+	)
 }
 
 var (
@@ -126,7 +131,6 @@ func TestExistingSecretNotOwnedByUs(t *testing.T) {
 	}
 
 	s := scheme.Scheme
-	s.AddKnownTypes(corev1.SchemeGroupVersion, secret)
 	s.AddKnownTypes(craftypathv1alpha1.SchemeGroupVersion, sopsSecret)
 	recorder := record.NewFakeRecorder(1)
 	r := newReconcileSopSecret(s, recorder, secret, sopsSecret)

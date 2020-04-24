@@ -8,6 +8,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/go-logr/logr"
+
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -60,19 +62,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SopsSecret
-	err = c.Watch(&source.Kind{Type: &craftypathv1alpha1.SopsSecret{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
+	if err = c.Watch(&source.Kind{Type: &craftypathv1alpha1.SopsSecret{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
-
-	// // Watch for changes to secondary resource Pods and requeue the owner SopsSecret
-	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &craftypathv1alpha1.SopsSecret{},
-	// })
-	// if err != nil {
-	// 	return err
-	// }
 
 	return nil
 }
@@ -94,13 +86,13 @@ type ReconcileSopsSecret struct {
 // and what is in the SopsSecret.Spec
 func (r *ReconcileSopsSecret) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling SopsSecret")
+	ctx := context.WithValue(context.Background(), "logger", reqLogger)
 
-	ctx := context.Background()
+	reqLogger.Info("reconciling SopsSecret")
 
 	// Fetch the SopsSecret instance
 	instance := &craftypathv1alpha1.SopsSecret{}
-	if err := r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, instance); err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -117,26 +109,29 @@ func (r *ReconcileSopsSecret) Reconcile(request reconcile.Request) (reconcile.Re
 				return fmt.Errorf("secret already exists and not owned by sops-operator")
 			}
 		}
-		if err := r.update(secret, instance); err != nil {
-			return err
+		if err := r.update(ctx, secret, instance); err != nil {
+			return fmt.Errorf("failed to update secret: %w", err)
 		}
-
 		return nil
 	})
 	if err != nil {
-		return r.manageError(instance, err)
+		return r.manageError(ctx, instance, err)
 	}
 
-	return r.manageSuccess(instance, result)
+	return r.manageSuccess(ctx, instance, result)
 }
 
-func (r *ReconcileSopsSecret) update(secret *corev1.Secret, sopsSecret *craftypathv1alpha1.SopsSecret) error {
+func (r *ReconcileSopsSecret) update(ctx context.Context, secret *corev1.Secret, sopsSecret *craftypathv1alpha1.SopsSecret) error {
+	logger(ctx).V(1).Info("handling Secret update")
+
 	data := make(map[string][]byte, len(sopsSecret.Spec.StringData))
 	for fileName, encryptedContents := range sopsSecret.Spec.StringData {
+		logger(ctx).V(1).Info("decrypting data", "fileName", fileName)
 		decrypted, err := r.decryptor.Decrypt(fileName, encryptedContents)
 		if err != nil {
 			return err
 		}
+		logger(ctx).V(1).Info("base64-encoding data", "fileName", fileName)
 		buf := make([]byte, base64.StdEncoding.EncodedLen(len(decrypted)))
 		base64.StdEncoding.Encode(buf, decrypted)
 		data[fileName] = buf
@@ -149,14 +144,15 @@ func (r *ReconcileSopsSecret) update(secret *corev1.Secret, sopsSecret *craftypa
 		secret.Type = sopsSecret.Spec.Type
 	}
 
+	logger(ctx).V(1).Info("setting controller reference")
 	if err := ctrl.SetControllerReference(sopsSecret, secret, r.scheme); err != nil {
 		return fmt.Errorf("unable to set ownerReference: %w", err)
 	}
 	return nil
 }
 
-func (r *ReconcileSopsSecret) manageError(instance *craftypathv1alpha1.SopsSecret, issue error) (reconcile.Result, error) {
-	var retryInterval time.Duration
+func (r *ReconcileSopsSecret) manageError(ctx context.Context, instance *craftypathv1alpha1.SopsSecret, issue error) (reconcile.Result, error) {
+	logger(ctx).V(1).Info("handling reconciliation error")
 
 	r.recorder.Event(instance, "Warning", "ProcessingError", capitalizeFirst(issue.Error()))
 
@@ -170,27 +166,32 @@ func (r *ReconcileSopsSecret) manageError(instance *craftypathv1alpha1.SopsSecre
 	}
 	instance.Status = status
 
-	if err := r.client.Status().Update(context.Background(), instance); err != nil {
-		log.Error(err, "Unable to update status")
+	if err := r.client.Status().Update(ctx, instance); err != nil {
+		log.Error(err, "unable to update status")
 		return reconcile.Result{
 			RequeueAfter: time.Second,
 			Requeue:      true,
 		}, nil
 	}
 
+	var retryInterval time.Duration
 	if lastUpdate.IsZero() || lastStatus == "Success" {
 		retryInterval = time.Second
 	} else {
 		retryInterval = status.LastUpdate.Sub(lastUpdate.Time.Round(time.Second))
 	}
 
+	reqeueAfter := time.Duration(math.Min(float64(retryInterval.Nanoseconds()*2), float64(time.Hour.Nanoseconds()*6)))
+	logger(ctx).Error(issue, "failed to reconcile SopsSecret", "reqeueAfter", reqeueAfter)
 	return reconcile.Result{
-		RequeueAfter: time.Duration(math.Min(float64(retryInterval.Nanoseconds()*2), float64(time.Hour.Nanoseconds()*6))),
+		RequeueAfter: reqeueAfter,
 		Requeue:      true,
 	}, nil
 }
 
-func (r *ReconcileSopsSecret) manageSuccess(instance *craftypathv1alpha1.SopsSecret, result controllerutil.OperationResult) (reconcile.Result, error) {
+func (r *ReconcileSopsSecret) manageSuccess(ctx context.Context, instance *craftypathv1alpha1.SopsSecret, result controllerutil.OperationResult) (reconcile.Result, error) {
+	logger(ctx).V(1).Info("handling reconciliation success")
+
 	status := craftypathv1alpha1.SopsSecretStatus{
 		LastUpdate: metav1.Now(),
 		Reason:     "",
@@ -198,8 +199,8 @@ func (r *ReconcileSopsSecret) manageSuccess(instance *craftypathv1alpha1.SopsSec
 	}
 	instance.Status = status
 
-	if err := r.client.Status().Update(context.Background(), instance); err != nil {
-		log.Error(err, "unable to update status")
+	if err := r.client.Status().Update(ctx, instance); err != nil {
+		logger(ctx).Error(err, "unable to update status")
 		r.recorder.Event(instance, "Warning", "ProcessingError", "Unable to update status")
 		return reconcile.Result{
 			RequeueAfter: time.Second,
@@ -208,7 +209,9 @@ func (r *ReconcileSopsSecret) manageSuccess(instance *craftypathv1alpha1.SopsSec
 	}
 
 	opResult := capitalizeFirst(string(result))
-	r.recorder.Event(instance, "Normal", opResult, fmt.Sprintf("%s secret: %s", opResult, instance.Name))
+	msg := fmt.Sprintf("%s secret: %s", opResult, instance.Name)
+	logger(ctx).Info("status updated successfully: " + msg)
+	r.recorder.Event(instance, "Normal", opResult, msg)
 	return reconcile.Result{}, nil
 }
 
@@ -219,4 +222,8 @@ func capitalizeFirst(s string) string {
 	tmp := []rune(s)
 	tmp[0] = unicode.ToUpper(tmp[0])
 	return string(tmp)
+}
+
+func logger(ctx context.Context) logr.Logger {
+	return ctx.Value("logger").(logr.Logger)
 }
