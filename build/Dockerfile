@@ -1,15 +1,5 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM gcr.io/distroless/static:nonroot
 
-ENV OPERATOR=/usr/local/bin/sops-operator \
-    USER_UID=1001 \
-    USER_NAME=sops-operator
+COPY sops-operator /usr/local/bin/
 
-# install operator binary
-COPY build/_output/bin/sops-operator ${OPERATOR}
-
-COPY build/bin /usr/local/bin
-RUN  /usr/local/bin/user_setup
-
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
-
-USER ${USER_UID}
+ENTRYPOINT ["sops-operator"]
