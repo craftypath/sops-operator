@@ -52,3 +52,5 @@ jobs:
           mage -v release
         env:
           GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
