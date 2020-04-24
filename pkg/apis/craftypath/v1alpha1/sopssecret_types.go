@@ -30,9 +30,9 @@ type SopsSecretSpec struct {
 
 // SopsSecretStatus defines the observed state of SopsSecret
 type SopsSecretStatus struct {
-	LastUpdate metav1.Time
-	Reason     string
-	Status     string
+	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
+	Reason     string      `json:"reason,omitempty"`
+	Status     string      `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

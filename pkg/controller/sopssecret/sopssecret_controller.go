@@ -16,7 +16,6 @@ package sopssecret
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math"
 	"time"
@@ -150,10 +149,7 @@ func (r *ReconcileSopsSecret) update(ctx context.Context, secret *corev1.Secret,
 		if err != nil {
 			return err
 		}
-		logger(ctx).V(1).Info("base64-encoding data", "fileName", fileName)
-		buf := make([]byte, base64.StdEncoding.EncodedLen(len(decrypted)))
-		base64.StdEncoding.Encode(buf, decrypted)
-		data[fileName] = buf
+		data[fileName] = decrypted
 	}
 
 	secret.ObjectMeta.Annotations = sopsSecret.Annotations
@@ -210,6 +206,10 @@ func (r *ReconcileSopsSecret) manageError(ctx context.Context, instance *craftyp
 
 func (r *ReconcileSopsSecret) manageSuccess(ctx context.Context, instance *craftypathv1alpha1.SopsSecret, result controllerutil.OperationResult) (reconcile.Result, error) {
 	logger(ctx).V(1).Info("handling reconciliation success")
+
+	if result == controllerutil.OperationResultNone {
+		return reconcile.Result{}, nil
+	}
 
 	status := craftypathv1alpha1.SopsSecretStatus{
 		LastUpdate: metav1.Now(),
