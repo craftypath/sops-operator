@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 	secret := &corev1.Secret{}
 	err = r.client.Get(context.Background(), req.NamespacedName, secret)
 	require.NoError(t, err)
-	assert.Equal(t, secret.Data["test.yaml"], []byte("dW5lbmNyeXB0ZWQ="))
+	assert.Equal(t, secret.Data["test.yaml"], []byte("unencrypted"))
 	event := <-recorder.Events
 	assert.Equal(t, event, "Normal Created Created secret: test-secret")
 }
