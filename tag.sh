@@ -100,7 +100,7 @@ main() {
     git tag -a -m "Release $tag" "$tag" "${force[@]}"
 
     if [[ -z "$skip_push" ]]; then
-        git push "$remote" "refs/tags/$tag"
+        git push "$remote" "refs/tags/$tag" "${force[@]}"
     fi
 
     popd > /dev/null
