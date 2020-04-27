@@ -84,6 +84,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch for changes to secrets owned by us
+	if err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &craftypathv1alpha1.SopsSecret{},
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
