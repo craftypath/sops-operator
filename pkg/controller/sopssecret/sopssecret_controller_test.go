@@ -63,35 +63,64 @@ var (
 	}
 )
 
-func TestCreate(t *testing.T) {
-	sopsSecret := &craftypathv1alpha1.SopsSecret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+func TestReconcile_Create(t *testing.T) {
+	tests := []struct {
+		name       string
+		sopsSecret *craftypathv1alpha1.SopsSecret
+	}{
+		{
+			name: "without metadata",
+			sopsSecret: &craftypathv1alpha1.SopsSecret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: craftypathv1alpha1.SopsSecretSpec{
+					StringData: map[string]string{"test.yaml": "encrypted"},
+				},
+			},
 		},
-		Spec: craftypathv1alpha1.SopsSecretSpec{
-			StringData: map[string]string{"test.yaml": "encrypted"},
+		{
+			name: "with metadata",
+			sopsSecret: &craftypathv1alpha1.SopsSecret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: craftypathv1alpha1.SopsSecretSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels:      map[string]string{"mylabel": "foo"},
+						Annotations: map[string]string{"myannotation": "bar"},
+					},
+					StringData: map[string]string{"test.yaml": "encrypted"},
+				},
+			},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := scheme.Scheme
+			s.AddKnownTypes(craftypathv1alpha1.SchemeGroupVersion, tt.sopsSecret)
+			recorder := record.NewFakeRecorder(1)
+			r := newReconcileSopSecret(s, recorder, tt.sopsSecret)
 
-	s := scheme.Scheme
-	s.AddKnownTypes(craftypathv1alpha1.SchemeGroupVersion, sopsSecret)
-	recorder := record.NewFakeRecorder(1)
-	r := newReconcileSopSecret(s, recorder, sopsSecret)
+			res, err := r.Reconcile(req)
+			require.NoError(t, err)
+			assert.False(t, res.Requeue)
 
-	res, err := r.Reconcile(req)
-	require.NoError(t, err)
-	assert.False(t, res.Requeue)
-
-	secret := &corev1.Secret{}
-	err = r.client.Get(context.Background(), req.NamespacedName, secret)
-	require.NoError(t, err)
-	assert.Equal(t, secret.Data["test.yaml"], []byte("unencrypted"))
-	event := <-recorder.Events
-	assert.Equal(t, event, "Normal Created Created secret: test-secret")
+			secret := &corev1.Secret{}
+			err = r.client.Get(context.Background(), req.NamespacedName, secret)
+			require.NoError(t, err)
+			assert.Equal(t, []byte("unencrypted"), secret.Data["test.yaml"])
+			assert.Equal(t, tt.sopsSecret.Spec.Labels, secret.Labels)
+			assert.Equal(t, tt.sopsSecret.Spec.Annotations, secret.Annotations)
+			event := <-recorder.Events
+			assert.Equal(t, event, "Normal Created Created secret: test-secret")
+		})
+	}
 }
 
-func TestUpdate(t *testing.T) {
+func TestReconcile_Update(t *testing.T) {
 	sopsSecret := &craftypathv1alpha1.SopsSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -114,10 +143,15 @@ func TestUpdate(t *testing.T) {
 	err = r.client.Get(context.Background(), req.NamespacedName, secret)
 	require.NoError(t, err)
 	assert.Empty(t, secret.Labels)
+	assert.Empty(t, secret.Annotations)
 
-	sopsSecret.Labels = map[string]string{
-		"foo": "42",
+	sopsSecret.Spec.Labels = map[string]string{
+		"mylabel": "foo",
 	}
+	sopsSecret.Spec.Annotations = map[string]string{
+		"myannotation": "bar",
+	}
+
 	err = r.client.Update(context.Background(), sopsSecret)
 	require.NoError(t, err)
 
@@ -126,7 +160,8 @@ func TestUpdate(t *testing.T) {
 	assert.False(t, res.Requeue)
 	err = r.client.Get(context.Background(), req.NamespacedName, secret)
 	require.NoError(t, err)
-	assert.Equal(t, secret.Labels["foo"], "42")
+	assert.Equal(t, sopsSecret.Spec.Labels, secret.Labels)
+	assert.Equal(t, sopsSecret.Spec.Annotations, secret.Annotations)
 	event = <-recorder.Events
 	assert.Equal(t, event, "Normal Updated Updated secret: test-secret")
 }
