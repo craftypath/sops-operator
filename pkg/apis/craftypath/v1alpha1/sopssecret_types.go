@@ -19,16 +19,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// SopsSecretSpec defines the desired state of SopsSecret
+// SopsSecretSpec defines the desired state of SopsSecret.
 type SopsSecretSpec struct {
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// StringData allows specifying Sops-encrypted secret data in string form.
+	// +optional
 	StringData map[string]string `json:"stringData,omitempty"`
 
 	// Type specifies the type of the secret.
+	// +optional
 	Type v1.SecretType `json:"type,omitempty"`
 }
 
-// SopsSecretStatus defines the observed state of SopsSecret
+// SopsSecretStatus defines the observed state of SopsSecret.
 type SopsSecretStatus struct {
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 	Reason     string      `json:"reason,omitempty"`
@@ -37,20 +43,21 @@ type SopsSecretStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SopsSecret is the Schema for the sopssecrets API
+// SopsSecret is the Schema for the sopssecrets API.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=sopssecrets,scope=Namespaced
 type SopsSecret struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SopsSecretSpec   `json:"spec,omitempty"`
+	Spec SopsSecretSpec `json:"spec"`
+	// +optional
 	Status SopsSecretStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SopsSecretList contains a list of SopsSecret
+// SopsSecretList contains a list of SopsSecret.
 type SopsSecretList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
