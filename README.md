@@ -17,6 +17,11 @@ kind: SopsSecret
 metadata:
   name: test-secret
 spec:
+  metadata:
+    labels:
+      mylabel: mylabelvalue
+    annotations:
+      myannotation: myannotationvalue
   stringData:
     test.yaml: |
       test: ENC[AES256_GCM,data:xo8jZTsQ,iv:DTouw1kgBLok6BbR5vx8366fFavV70QeCWGNQPhNb9s=,tag:RAjeoNhvGUezdOS4YOorfA==,type:str]
@@ -43,6 +48,10 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: test-secret
+  labels:
+    mylabel: mylabelvalue
+  annotations:
+    myannotation: myannotationvalue
 data:
   test.yaml: dGVzdDogdGVzdHZhbHVlCg==
 ```
