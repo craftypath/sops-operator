@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -33,7 +34,6 @@ import (
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
-	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/spf13/pflag"
@@ -46,7 +46,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
-// Change below variables to serve metrics on different host or port.
+type leaderElectionFlags struct {
+	leaderElection          bool
+	leaderElectionID        string
+	leaderElectionNamespace string
+	leaseDuration           time.Duration
+	renewDeadline           time.Duration
+	retryPeriod             time.Duration
+}
+
+func (l *leaderElectionFlags) flagSet() *pflag.FlagSet {
+	leaderElectionFlags := pflag.NewFlagSet("leader-election", pflag.ExitOnError)
+	leaderElectionFlags.StringVar(&l.leaderElectionID, "leader-election-id", "sops-operator-lock", "The name of the configmap that leader election will use for holding the leader lock")
+	leaderElectionFlags.BoolVar(&l.leaderElection, "leader-election", true, "Enable leader election")
+	leaderElectionFlags.StringVar(&l.leaderElectionNamespace, "leader-election-namespace", "", "The namespace in which the leader election configmap will be created")
+	leaderElectionFlags.DurationVar(&l.leaseDuration, "lease-duration", 15*time.Second, "The duration that non-leader candidates will wait to force acquire leadership")
+	leaderElectionFlags.DurationVar(&l.renewDeadline, "renew-deadline", 10*time.Second, "The duration that the acting master will retry refreshing leadership before giving up")
+	leaderElectionFlags.DurationVar(&l.retryPeriod, "retry-duration", 2*time.Second, "Te duration the LeaderElector clients should wait between tries of actions")
+	return leaderElectionFlags
+}
+
 var (
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8383
@@ -70,6 +89,9 @@ func main() {
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	lef := leaderElectionFlags{}
+	pflag.CommandLine.AddFlagSet(lef.flagSet())
 
 	pflag.Parse()
 
@@ -98,18 +120,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.TODO()
-	// Become the leader before proceeding
-	err = leader.Become(ctx, "sops-operator-lock")
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
 	// Set default manager options
 	options := manager.Options{
-		Namespace:          namespace,
-		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		Namespace:               namespace,
+		LeaderElection:          lef.leaderElection,
+		LeaderElectionID:        lef.leaderElectionID,
+		LeaderElectionNamespace: lef.leaderElectionNamespace,
+		LeaseDuration:           &lef.leaseDuration,
+		RenewDeadline:           &lef.renewDeadline,
+		RetryPeriod:             &lef.retryPeriod,
+		MetricsBindAddress:      fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	}
 
 	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
@@ -143,7 +163,7 @@ func main() {
 	}
 
 	// Add the Metrics Service
-	addMetrics(ctx, cfg)
+	addMetrics(context.TODO(), cfg)
 
 	log.Info("Starting the Cmd.")
 
