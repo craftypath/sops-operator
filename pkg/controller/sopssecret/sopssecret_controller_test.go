@@ -145,6 +145,9 @@ func TestReconcile_Update(t *testing.T) {
 	assert.Empty(t, secret.Labels)
 	assert.Empty(t, secret.Annotations)
 
+	err = r.client.Get(context.Background(), req.NamespacedName, sopsSecret)
+	require.NoError(t, err)
+
 	sopsSecret.Spec.Labels = map[string]string{
 		"mylabel": "foo",
 	}
