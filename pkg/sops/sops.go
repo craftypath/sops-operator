@@ -16,6 +16,7 @@ package sops
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 
@@ -53,7 +54,7 @@ func (d *Decryptor) Decrypt(fileName string, encrypted string) ([]byte, error) {
 	output, err := command.Output()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
-			log.Error(e, "failed to decrypt file", "file", fileName, "stderr", string(e.Stderr))
+			return nil, fmt.Errorf("failed to decrypt file: %s", string(e.Stderr))
 		}
 		return nil, err
 	}
