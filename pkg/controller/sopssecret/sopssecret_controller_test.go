@@ -88,7 +88,7 @@ func TestReconcile_Create(t *testing.T) {
 					Namespace: namespace,
 				},
 				Spec: craftypathv1alpha1.SopsSecretSpec{
-					ObjectMeta: metav1.ObjectMeta{
+					Metadata: craftypathv1alpha1.SopsSecretObjectMeta{
 						Labels:      map[string]string{"mylabel": "foo"},
 						Annotations: map[string]string{"myannotation": "bar"},
 					},
@@ -112,8 +112,8 @@ func TestReconcile_Create(t *testing.T) {
 			err = r.client.Get(context.Background(), req.NamespacedName, secret)
 			require.NoError(t, err)
 			assert.Equal(t, []byte("unencrypted"), secret.Data["test.yaml"])
-			assert.Equal(t, tt.sopsSecret.Spec.Labels, secret.Labels)
-			assert.Equal(t, tt.sopsSecret.Spec.Annotations, secret.Annotations)
+			assert.Equal(t, tt.sopsSecret.Spec.Metadata.Labels, secret.Labels)
+			assert.Equal(t, tt.sopsSecret.Spec.Metadata.Annotations, secret.Annotations)
 			event := <-recorder.Events
 			assert.Equal(t, event, "Normal Created Created secret: test-secret")
 		})
@@ -148,10 +148,10 @@ func TestReconcile_Update(t *testing.T) {
 	err = r.client.Get(context.Background(), req.NamespacedName, sopsSecret)
 	require.NoError(t, err)
 
-	sopsSecret.Spec.Labels = map[string]string{
+	sopsSecret.Spec.Metadata.Labels = map[string]string{
 		"mylabel": "foo",
 	}
-	sopsSecret.Spec.Annotations = map[string]string{
+	sopsSecret.Spec.Metadata.Annotations = map[string]string{
 		"myannotation": "bar",
 	}
 
@@ -163,8 +163,8 @@ func TestReconcile_Update(t *testing.T) {
 	assert.False(t, res.Requeue)
 	err = r.client.Get(context.Background(), req.NamespacedName, secret)
 	require.NoError(t, err)
-	assert.Equal(t, sopsSecret.Spec.Labels, secret.Labels)
-	assert.Equal(t, sopsSecret.Spec.Annotations, secret.Annotations)
+	assert.Equal(t, sopsSecret.Spec.Metadata.Labels, secret.Labels)
+	assert.Equal(t, sopsSecret.Spec.Metadata.Annotations, secret.Annotations)
 	event = <-recorder.Events
 	assert.Equal(t, event, "Normal Updated Updated secret: test-secret")
 }
@@ -194,6 +194,14 @@ func TestExistingSecretNotOwnedByUs(t *testing.T) {
 	require.NoError(t, err)
 	event := <-recorder.Events
 	assert.Contains(t, event, "Secret already exists and not owned by sops-operator")
+
+	err = r.client.Delete(context.Background(), secret)
+	require.NoError(t, err)
+
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+	event = <-recorder.Events
+	assert.Contains(t, event, "Normal Created Created secret: test-secret")
 }
 
 func newReconcileSopSecret(s *runtime.Scheme, recorder *record.FakeRecorder, objs ...runtime.Object) *ReconcileSopsSecret {

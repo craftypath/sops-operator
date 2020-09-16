@@ -160,8 +160,8 @@ func (r *ReconcileSopsSecret) update(ctx context.Context, secret *corev1.Secret,
 		data[fileName] = decrypted
 	}
 
-	secret.Annotations = sopsSecret.Spec.Annotations
-	secret.Labels = sopsSecret.Spec.Labels
+	secret.Annotations = sopsSecret.Spec.Metadata.Annotations
+	secret.Labels = sopsSecret.Spec.Metadata.Labels
 	secret.Data = data
 	if sopsSecret.Spec.Type != "" {
 		secret.Type = sopsSecret.Spec.Type

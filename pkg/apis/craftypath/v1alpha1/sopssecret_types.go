@@ -19,11 +19,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// SopsSecretObjectMeta defines metadata for generated Secrets.
+type SopsSecretObjectMeta struct {
+	// Annotations allows adding annotations to generated Secrets.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Labels allows adding labels to generated Secrets.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
 // SopsSecretSpec defines the desired state of SopsSecret.
 type SopsSecretSpec struct {
-	// Standard object metadata.
+	// Metadata allows adding labels and annotations to generated Secrets.
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Metadata SopsSecretObjectMeta `json:"metadata,omitempty"`
 
 	// StringData allows specifying Sops-encrypted secret data in string form.
 	// +optional
