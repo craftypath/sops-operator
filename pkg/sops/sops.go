@@ -46,10 +46,7 @@ func (d *Decryptor) Decrypt(fileName string, encrypted string) ([]byte, error) {
 
 	// We shell out to SOPS because that way we get better error messages
 	command := exec.Command("sops", args...)
-
-	buffer := bytes.Buffer{}
-	buffer.WriteString(encrypted)
-	command.Stdin = &buffer
+	command.Stdin = bytes.NewBufferString(encrypted)
 
 	output, err := command.Output()
 	if err != nil {
