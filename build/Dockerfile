@@ -8,6 +8,9 @@ RUN microdnf update -y && \
 RUN groupadd --gid 1000 sops-operator && \
     useradd --uid 1000 --gid 1000 sops-operator
 
+RUN curl -fsSLo /usr/local/bin/sops https://github.com/mozilla/sops/releases/download/v3.6.1/sops-v3.6.1.linux && \
+    chmod +x /usr/local/bin/sops
+
 USER sops-operator
 WORKDIR /home/sops-operator
 
