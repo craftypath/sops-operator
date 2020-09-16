@@ -15,15 +15,55 @@
 package sops
 
 import (
-	"go.mozilla.org/sops/v3/cmd/sops/formats"
-	"go.mozilla.org/sops/v3/decrypt"
+	"bytes"
+	"os/exec"
+	"path/filepath"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type Decryptor struct{}
 
-// Decrypt decrypts the given encrypted string. The format (yaml, json, env, init, binary)
+var (
+	log = logf.Log.WithName("sops")
+
+	fileFormats = map[string]string{
+		".yaml": "yaml",
+		".yml":  "yaml",
+		".json": "json",
+		".ini":  "ini",
+		".env":  "dotenv",
+	}
+)
+
+// Decrypt decrypts the given encrypted string. The format (yaml, json, dotenv, init, binary)
 // is determined by the given fileName.
 func (d *Decryptor) Decrypt(fileName string, encrypted string) ([]byte, error) {
-	format := formats.FormatForPath(fileName)
-	return decrypt.DataWithFormat([]byte(encrypted), format)
+	format := determineFileFormat(fileName)
+	args := []string{"--decrypt", "--input-type", format, "--output-type", format, "/dev/stdin"}
+	log.V(1).Info("running sops", "args", args)
+
+	// We shell out to SOPS because that way we get better error messages
+	command := exec.Command("sops", args...)
+
+	buffer := bytes.Buffer{}
+	buffer.WriteString(encrypted)
+	command.Stdin = &buffer
+
+	output, err := command.Output()
+	if err != nil {
+		if e, ok := err.(*exec.ExitError); ok {
+			log.Error(e, "failed to decrypt file", "file", fileName, "stderr", string(e.Stderr))
+		}
+		return nil, err
+	}
+	return output, err
+}
+
+func determineFileFormat(fileName string) string {
+	ext := filepath.Ext(fileName)
+	if format, exists := fileFormats[ext]; exists {
+		return format
+	}
+	return "binary"
 }
