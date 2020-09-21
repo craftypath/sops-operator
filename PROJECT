@@ -1,0 +1,7 @@
+domain: github.io
+repo: github-com/craftypath/sops-operator
+resources:
+- group: craftypath
+  kind: SopsSecret
+  version: v1alpha1
+version: "2"
