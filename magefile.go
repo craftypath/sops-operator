@@ -125,7 +125,7 @@ func Test() error {
 }
 
 func Build() error {
-	return sh.RunV("goreleaser", "release", "--rm-dist", "--skip-publish", "--skip-validate")
+	return sh.RunV("goreleaser", "release", "--rm-dist", "--snapshot")
 }
 
 func Release() error {
