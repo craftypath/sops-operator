@@ -32,7 +32,7 @@ regex_find() {
 check_header() {
     local file="$1"
 
-    grep -q '// Copyright The SOPS Operator Authors' "$file"
+    grep -q 'Copyright The SOPS Operator Authors.' "$file"
     grep -q 'https://www.apache.org/licenses/LICENSE-2.0' "$file"
 }
 
