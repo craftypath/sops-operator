@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
     tags:
       - v*
 
@@ -30,7 +30,7 @@ jobs:
       - name: Install tools
         run: |
           ./setup.sh
-          echo "::add-path::$(go env GOPATH)/bin"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Check License Headers
         run: mage -v checkLicenseHeaders
