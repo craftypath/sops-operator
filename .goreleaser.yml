@@ -2,17 +2,14 @@ before:
   hooks:
     - go mod download
 builds:
-  - main: cmd/manager/main.go
+  - main: main.go
     binary: sops-operator
     env:
       - CGO_ENABLED=0
     goarch:
-      - arm
       - amd64
     goos:
       - linux
-      - darwin
-      - windows
     ldflags:
       - >-
         -X github.com/craftypath/sops-operator/pkg/version.Version={{ .Tag }}
@@ -23,16 +20,13 @@ checksum:
 snapshot:
   name_template: "{{ .Tag }}-next"
 archives:
-  - format_overrides:
-      - goos: windows
-        format: zip
-    files:
+  - files:
       - LICENSE
       - README.md
 dockers:
   - goos: linux
     goarch: amd64
-    binaries:
+    ids:
       - sops-operator
     skip_push: false
     dockerfile: build/Dockerfile
