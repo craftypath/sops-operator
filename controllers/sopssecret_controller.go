@@ -51,6 +51,8 @@ type SopsSecretReconciler struct {
 //+kubebuilder:rbac:groups=craftypath.github.io,resources=sopssecrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=craftypath.github.io,resources=sopssecrets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=craftypath.github.io,resources=sopssecrets/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.FromContext(ctx)

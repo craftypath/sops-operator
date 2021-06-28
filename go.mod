@@ -7,6 +7,7 @@ require (
 	github.com/goreleaser/goreleaser v0.172.1
 	github.com/magefile/mage v1.11.0
 	github.com/stretchr/testify v1.7.0
+	github.com/sykesm/zap-logfmt v0.0.4
 	go.uber.org/zap v1.17.0
 	golang.org/x/tools v0.1.4
 	k8s.io/api v0.21.2
