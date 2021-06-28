@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/craftypath/sops-operator/pkg/sops"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -43,6 +44,8 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
+
+const controllerName string = "sopssecret-controller"
 
 // watchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
 // which specifies the namespaces (comma-separated) to watch.
@@ -103,8 +106,10 @@ func main() {
 	}
 
 	if err = (&controllers.SopsSecretReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Recorder:  mgr.GetEventRecorderFor(controllerName),
+		Decryptor: &sops.Decryptor{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SopsSecret")
 		os.Exit(1)
