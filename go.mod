@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/golangci/golangci-lint v1.41.1
-	github.com/goreleaser/goreleaser v0.172.1
+	github.com/goreleaser/goreleaser v0.174.0
 	github.com/magefile/mage v1.11.0
 	github.com/stretchr/testify v1.7.0
 	github.com/sykesm/zap-logfmt v0.0.4
