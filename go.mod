@@ -4,12 +4,12 @@ go 1.16
 
 require (
 	github.com/golangci/golangci-lint v1.41.1
-	github.com/goreleaser/goreleaser v0.172.1
+	github.com/goreleaser/goreleaser v0.181.0
 	github.com/magefile/mage v1.11.0
 	github.com/stretchr/testify v1.7.0
 	github.com/sykesm/zap-logfmt v0.0.4
-	go.uber.org/zap v1.17.0
-	golang.org/x/tools v0.1.4
+	go.uber.org/zap v1.19.0
+	golang.org/x/tools v0.1.5
 	k8s.io/api v0.21.2
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v0.21.2
