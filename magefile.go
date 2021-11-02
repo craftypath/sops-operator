@@ -111,11 +111,10 @@ func CheckLicenseHeaders() error {
 }
 
 func ControllerGen() error {
-	const crdOpts = "crd:trivialVersions=true,preserveUnknownFields=false"
-	if err := sh.RunV("controller-gen", crdOpts, "paths=./...", "output:crd:artifacts:config=config/crd"); err != nil {
+	if err := sh.RunV("controller-gen", "crd", "paths=./...", "output:crd:artifacts:config=config/crd"); err != nil {
 		return err
 	}
-	if err := sh.RunV("controller-gen", crdOpts, "object:headerFile=hack/boilerplate.go.txt"); err != nil {
+	if err := sh.RunV("controller-gen", "crd", "object:headerFile=hack/boilerplate.go.txt"); err != nil {
 		return err
 	}
 	return nil
