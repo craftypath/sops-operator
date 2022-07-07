@@ -50,6 +50,6 @@ jobs:
           echo "$DOCKER_TOKEN" | docker login --username "$DOCKER_USERNAME" --password-stdin docker.io
           mage -v release
         env:
-          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
