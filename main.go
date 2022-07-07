@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/craftypath/sops-operator/pkg/sops"
+	"github.com/riskalyze/sops-operator/pkg/sops"
 	zaplogfmt "github.com/sykesm/zap-logfmt"
 	uzap "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/craftypath/sops-operator/api/v1alpha1"
-	"github.com/craftypath/sops-operator/controllers"
+	"github.com/riskalyze/sops-operator/api/v1alpha1"
+	"github.com/riskalyze/sops-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

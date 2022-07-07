@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/craftypath/sops-operator/api/v1alpha1"
+	"github.com/riskalyze/sops-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	uberzap "go.uber.org/zap"

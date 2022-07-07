@@ -12,9 +12,9 @@ builds:
       - linux
     ldflags:
       - >-
-        -X github.com/craftypath/sops-operator/pkg/version.Version={{ .Tag }}
-        -X github.com/craftypath/sops-operator/pkg/version.GitCommit={{ .Commit }}
-        -X github.com/craftypath/sops-operator/pkg/version.BuildDate={{ .Date }}
+        -X github.com/riskalyze/sops-operator/pkg/version.Version={{ .Tag }}
+        -X github.com/riskalyze/sops-operator/pkg/version.GitCommit={{ .Commit }}
+        -X github.com/riskalyze/sops-operator/pkg/version.BuildDate={{ .Date }}
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -31,8 +31,8 @@ dockers:
     skip_push: false
     dockerfile: build/Dockerfile
     image_templates:
-      - craftypath/sops-operator:{{ .Tag }}
-      - craftypath/sops-operator:latest
+      - riskalyze/sops-operator:{{ .Tag }}
+      - riskalyze/sops-operator:latest
     build_flag_templates:
       - --label=org.opencontainers.image.version={{ .Version }}
       - --label=org.opencontainers.image.revision={{ .Commit }}
@@ -41,5 +41,5 @@ dockers:
       - --label=org.opencontainers.image.description=The Kubernetes operator for Mozilla SOPS
       - --label=org.opencontainers.image.vendor=craftypath
       - --label=org.opencontainers.image.licenses=Apache-2.0
-      - --label=org.opencontainers.image.source=https://github.com/craftypath/sops-operator
+      - --label=org.opencontainers.image.source=https://github.com/riskalyze/sops-operator
       - --label=org.opencontainers.image.authors=The SOPS Operator Authors

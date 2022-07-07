@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	craftypathgithubiov1alpha1 "github.com/craftypath/sops-operator/api/v1alpha1"
+	craftypathgithubiov1alpha1 "github.com/riskalyze/sops-operator/api/v1alpha1"
 )
 
 type Decryptor interface {
