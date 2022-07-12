@@ -49,7 +49,7 @@ func (d *Decryptor) Decrypt(fileName string, encrypted string) ([]byte, error) {
 	if len(matches) < 2 {
 		return nil, fmt.Errorf("failed to detect region from encrypted string, got matches %v", matches)
 	}
-	args := []string{"--aws-endpoint", fmt.Sprintf("https://kms-fips.%s.amazonaws.com", matches[1]), "--decrypt", format, "--output-type", format, "/dev/stdin"}
+	args := []string{"--aws-endpoint", fmt.Sprintf("https://kms-fips.%s.amazonaws.com", matches[1]), "--decrypt", "--input-type", format, "--output-type", format, "/dev/stdin"}
 	log.V(1).Info("running sops", "args", args)
 
 	// We shell out to SOPS because that way we get better error messages
