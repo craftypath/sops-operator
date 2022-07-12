@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -44,12 +43,7 @@ var (
 // is determined by the given fileName.
 func (d *Decryptor) Decrypt(fileName string, encrypted string) ([]byte, error) {
 	format := determineFileFormat(fileName)
-	regionMatcher := regexp.MustCompile(`arn:aws:kms:([\w\d-]+):.*`)
-	matches := regionMatcher.FindStringSubmatch(encrypted)
-	if len(matches) < 2 {
-		return nil, fmt.Errorf("failed to detect region from encrypted string, got matches %v", matches)
-	}
-	args := []string{"--aws-endpoint", fmt.Sprintf("https://kms-fips.%s.amazonaws.com", matches[1]), "--decrypt", "--input-type", format, "--output-type", format, "/dev/stdin"}
+	args := []string{"--decrypt", "--input-type", format, "--output-type", format, "/dev/stdin"}
 	log.V(1).Info("running sops", "args", args)
 
 	// We shell out to SOPS because that way we get better error messages
