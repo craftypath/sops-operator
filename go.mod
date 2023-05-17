@@ -1,6 +1,6 @@
 module github.com/riskalyze/sops-operator
 
-go 1.17
+go 1.20
 
 require (
 	github.com/golangci/golangci-lint v1.42.1

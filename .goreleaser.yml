@@ -8,6 +8,7 @@ builds:
       - CGO_ENABLED=0
     goarch:
       - amd64
+      - arm64
     goos:
       - linux
     ldflags:
@@ -23,23 +24,14 @@ archives:
   - files:
       - LICENSE
       - README.md
-dockers:
-  - goos: linux
-    goarch: amd64
-    ids:
-      - sops-operator
-    skip_push: false
-    dockerfile: build/Dockerfile
-    image_templates:
-      - riskalyze/sops-operator:{{ .Tag }}
-      - riskalyze/sops-operator:latest
-    build_flag_templates:
-      - --label=org.opencontainers.image.version={{ .Version }}
-      - --label=org.opencontainers.image.revision={{ .Commit }}
-      - --label=org.opencontainers.image.title={{ .ProjectName }}
-      - --label=org.opencontainers.image.created={{ .Date }}
-      - --label=org.opencontainers.image.description=The Kubernetes operator for Mozilla SOPS
-      - --label=org.opencontainers.image.vendor=craftypath
-      - --label=org.opencontainers.image.licenses=Apache-2.0
-      - --label=org.opencontainers.image.source=https://github.com/riskalyze/sops-operator
-      - --label=org.opencontainers.image.authors=The SOPS Operator Authors
+kos:
+  - repository: docker.io/riskalyze/sops-operator
+    tags:
+    - '{{.Tag}}'
+    - latest
+    bare: true
+    working_dir: build
+    preserve_import_paths: false
+    platforms:
+    - linux/amd64
+    - linux/arm64
